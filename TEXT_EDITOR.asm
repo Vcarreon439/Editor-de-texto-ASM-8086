@@ -1,12 +1,13 @@
 .MODEL SMALL
 .DATA
-    matrix      db 80*25 dup(?),'$' ;25 lines of 80 chars each 
+    matrix      db 80*25 dup(?),'$' ;25 lineas de 80 caracteres cada una
     matrix_2    db 22 dup(?)        ;   
-    row         db 2                ;for navigating columns/character cells with arrow keys
-    column      db 0                ;for navigating rows/lines with arrow keys
-    curr_line   db 2                ;rows/lines while editing
-    curr_char   db 0                ;columns/chars while editing
-    ;for main menu
+    row         db 2                ;para navegar columnas/caracteres con las flechas
+    column      db 0                ;para navegar por las filas con las flechas
+    curr_line   db 2                ;filas/lineas mientras se edita
+    curr_char   db 0                ;columnas/caracteres mientras se edita
+    
+    ;Para el menu principal
     
     Titulo      db ' Editor de Texto $'
     deco1       db '**************************************************$'
@@ -49,15 +50,15 @@
 
 CONFIGURAR MACRO
     
-      MOV AX,0600H;Limpiar pantalla... AL = 00H limpia todos los renglones
-      MOV BH,5BH  ;color de fondo yletra
-      MOV CX,0000H ;esquina sup.izquierda de la pantalla(0,0)
-      MOV DX,184FH ;esquina inf. derecha de la pantalla(24,79)
+      MOV AX,0600H  ;Limpiar pantalla... AL = 00H limpia todos los renglones
+      MOV BH,5BH    ;color de fondo yletra
+      MOV CX,0000H  ;esquina sup.izquierda de la pantalla(0,0)
+      MOV DX,184FH  ;esquina inf. derecha de la pantalla(24,79)
       INT 10H
       
       MOV AH,02H 
-      MOV DX,00H ;posiscion del cursor(0,0) despues de limpiar pantalla
-      MOV BH,00H  ;Pagina 0
+      MOV DX,00H    ;posiscion del cursor(0,0) despues de limpiar pantalla
+      MOV BH,00H    ;Pagina 0
       INT 10H
     
 ENDM
@@ -73,31 +74,33 @@ ENDM
  
 newline macro
     
-    mov dl, 10       ;newline ASCII
+    mov dl, 10       ;nueva linea ASCII
     mov ah, 2
     int 21h   
-    mov dl, 13       ;linefeed (return) ASCII
+    mov dl, 13       ;alimentamos la linea (return) ASCII
     mov ah, 2
     int 21h
     
 endm
 remove macro
     
-    mov dx, 8        ;backspace to go back one char
+    mov dx, 8        ;backspace para ir atras de un caracter 
     mov ah, 2
     int 21h
-    mov dx, 32       ;space to remove that char
+    mov dx, 32       ;Espacio que elimina el caracter
     mov ah, 2
     int 21h
-    mov dx, 8        ;backspace to go back at removed char position
+    mov dx, 8        ;backspace para remover la posicion del caracter
     mov ah, 2
     int 21h
     
 endm
 
 goto_pos macro row, col
-    
-    mov ah, 02h      ;set text position in middle screen
+                      
+    ;Macro para ubicar el curso en la posicion deseada
+                          
+    mov ah, 02h      ;Establece la posicion del texto
     mov dh, row
     mov dl, col
     int 10h
@@ -105,17 +108,17 @@ goto_pos macro row, col
 endm
 
 clrScrn macro
-    mov ah, 02h    ;set cursor to upper left corner
+    mov ah, 02h    ;Establece la posicion del cursor a la esquina superior izquierda
     mov dh, 0
     mov dl, 0
     int 10h            
-    mov ah, 0Ah    ;overwrite with blank chars & remove all chars
-    mov al, 00h    ;character
-    mov cx, 2000  ;how many times to write
-    int 10h        ;graphics interrupt
+    mov ah, 0Ah     ;Sobreescribe con caracter vacio y quita todos los caracteres
+    mov al, 00h     ;Caracter
+    mov cx, 2000    ;Cuantas veces a escribir
+    int 10h         ;interrupcion grafica
 endm 
 debug macro arg
-    mov dx, arg    ;for debugging purpose
+    mov dx, arg    ;Con propositos de debugeo
     mov ah, 2
     int 21h
 endm
@@ -192,6 +195,9 @@ start_menu proc
     CMP AL,32H
     JE OPEN
     
+    CMP AL,33H
+    JE OPEN
+    
     CMP AL,34H
     JE Eliminar
     
@@ -242,7 +248,7 @@ Crear proc
     goto_pos 13, 40
     jmp input_char 
     
-    return:    ;clear the screen and return procedure
+    return:    ;Regresa al procedimiento
     ret 
     
 Crear endp
@@ -292,11 +298,11 @@ Eliminar proc
         jmp input_char3 
         
         
-        enter3:    ;clear the screen and return procedure
+        enter3:    ;En caso de presionar enter
             CONFIGURAR
             
-            mov ah,41h
-            mov dx, offset docName
+            mov ah,41h              ;modo de eliminacion
+            mov dx, offset docName  ;nombre del documento
             int 21h 
             jc ERROREL ;Si hubo error
             Imprimir 1,2,MSMDEL
@@ -304,11 +310,11 @@ Eliminar proc
         
         ERROREL:    
         
-            Imprimir 1,2,ERRORDEL
+            Imprimir 1,2,ERRORDEL   ;Mensaje de error
             MOV AH,01H
             INT 21H       
             
-            FLUSH
+            FLUSH                   ;Limpiamos los registros
             JMP start_menu
     
 Eliminar endp
@@ -328,56 +334,56 @@ upper_bar proc
     ret            
 upper_bar endp
 
-;=============== MAIN ===============
+;=============== Codigo Principal ===============
 MAIN PROC
     mov ax, @DATA
     mov ds, ax 
     
-    mov ah, 01h        ;Define Text Cursor Shape
+    mov ah, 01h        ;Define la forma del cursor
     mov cx, 07h        ;
     int 10h            ; 
     clrScrn
-    call start_menu    ;call start menu 
-    clrScrn            ;clear screen macro
-    call upper_bar     ;call upper stats bar in editor UI
+    call start_menu    ;Lama a start menu 
+    clrScrn            ;Limpia la pantalla
+    call upper_bar     ;Llama a upper_bar
     
-    goto_pos 2, 0      ;set cursor position beneath upper bar
+    goto_pos 2, 0      ;Esablece la poscion del cursor
     
     mov si, offset matrix 
     mov di, offset matrix_2
     MAIN_LOOP:
-    ; Get keystroke
+    ; Leer caracter
     mov ah, 00h
     int 16h
     ; AH = BIOS scan code
-    cmp ah, 01h            ;if escape key
+    cmp ah, 01h            ;Si tecla escape
     je EXIT
-    cmp al, 13h            ;if CTRL+S
+    cmp al, 13h            ;Si CTRL+S
     je SAVE
-    cmp al, 0Fh            ;if CTRL+O
+    cmp al, 0Fh            ;Si CTRL+O
     je OPEN
-    cmp ah, 48h            ;if up arrow
+    cmp ah, 48h            ;Si flecha arriba
     je UP
-    cmp ah, 50h            ;if down arrow
+    cmp ah, 50h            ;Si flecha abajo
     je DOWN
-    cmp ah, 4Bh            ;if left arrow
+    cmp ah, 4Bh            ;Si flecha izquierda
     je LEFT
-    cmp ah, 4Dh            ;if right arrow
+    cmp ah, 4Dh            ;Si flecha derecha
     je RIGHT                             
-    cmp ah, 1Ch            ;if enter (newline) key
+    cmp ah, 1Ch            ;Si enter nueva linea
     je ENTER                                    
-    cmp ah, 0Eh            ;if backspace (remove character)
+    cmp ah, 0Eh            ;Si backspace (quitar caracter)
     je BACKSPACE       
     
     cmp column, 79
     je ENTER
-    mov dl, al             ;if any other key then write char on screen
+    mov dl, al             ;Si otra tecla entonces escribe el caracter en la pantalla
     mov ah, 2
     int 21h        
-    mov [si], al           ;add char in matrix array
+    mov [si], al           ;Anadir caracter a la matriz
     inc si
-    inc curr_char          ;increment char position on current row
-    inc column             ;also increment the current character count
+    inc curr_char          ;incrementa la posicion del caracter en la fila actual
+    inc column             ;tambien incrementa el contador de caracteres
     goto_pos row, column
     jmp MAIN_LOOP
          
@@ -394,15 +400,15 @@ MAIN PROC
     mov cx, 0               ;Archivo de solo lectura
     mov dx, offset docName  ;Darle el nombre que tomamos de Main Menu
     int 21h                 
-    mov ah, 3Dh             ;opening file
-    mov al, 1               ;for writing mode
-    mov dx, offset docName  ;which file
+    mov ah, 3Dh             ;Abre el archivo
+    mov al, 1               ;Para modo de escritura
+    mov dx, offset docName  ;Nombre del archivo
     int 21h
-    mov HANDLE, ax          ;setting up handler
-    mov ah, 40h             ;function for writing files
-    mov bx, HANDLE          ;search for file handler
-    mov cx, 2000            ;how many bytes to write in file
-    mov dx, offset matrix   ;what to write
+    mov HANDLE, ax          ;Establecemos el manejador
+    mov ah, 40h             ;Funcion de escribir archivos
+    mov bx, HANDLE          ;Busca el archivo para el manejador de archivos
+    mov cx, 2000            ;Cuantos bytes es escribiran en el archivo
+    mov dx, offset matrix   ;Que se va a escribir
     int 21h
     jmp MAIN_LOOP  
     
@@ -413,7 +419,8 @@ MAIN PROC
     
     
     ;Entrada de caracteres para el nombre del documento
-    mov cx, 0  ;Contador del tamano del arreglo
+    
+    mov cx, 0           ;Contador del tamano del arreglo
     mov di, offset docName
     input_char2: 
     mov ah, 1
@@ -445,9 +452,9 @@ MAIN PROC
     return2:            ;Limpia la pantalla y regresa al procedimiento
     clrScrn
     call upper_bar 
-    goto_pos 2, 0           ;set cursor position beneath upper bar
+    goto_pos 2, 0           ;Establece la posicion del cursor 
     mov ah, 0x3d             ;Para abir archivos
-    mov al, 00               ;file handler for reading files
+    mov al, 00               ;Manejador de archivos para leer archivos
     mov dx, offset docName
     int 21h
     mov HANDLE, ax           ;Estableciento en handler
@@ -487,29 +494,30 @@ MAIN PROC
     jmp MAIN_LOOP
     
     ENTER:      
-    newline         ;newline macro
-    mov [si], 10    ;move newline into array 
+    newline             ;Macro para nueva linea
+    mov [si], 10        ;Mueve la nueva linea al arreglo
     inc si
     mov dl, curr_char
     mov [di], dl
     inc di
     inc curr_line
     mov curr_char, 0
-    inc row             ;increment row number
-    mov column, 0       ;get hold of 0th Col for Navigation
-    goto_pos row, 0     ;to get on newline 0th column
+    inc row             ;Incrementa el numero de filas
+    mov column, 0       ;Se va  a la posicion 0 en columnas para la navegacion
+    goto_pos row, 0     ;Va a la posicion 0 en columna
     jmp MAIN_LOOP
     
     BACKSPACE:
-    ;IF TRUE
-    cmp curr_line, 2    ;see if cursor is on the very 1st line of document
-    ;THEN DO THIS
-    je rmv              ;if TRUE, then just Remove the chars from matrix
-    ;IF TRUE
-    cmp curr_char, 0    ;see if cursor is on the 0th POS on most left
-    ;THEN DO THIS
-    je goBackLine       ;if TRUE, then go back to upper row at the latest character's POS
-    ;ELSE DO THIS
+    ;Si verdadero
+    cmp curr_line, 2    ;Ve si el cursor esta en la 1ra linea
+    ;Entonces esto
+    je rmv              ;Si verdadero, solo quita los caracteres de la matriz
+    ;Si verdadero
+    cmp curr_char, 0    ;Ve si el cursor esta en la posicion 0 a la izquierda
+    ;Entonces esto
+    je goBackLine       ;Si verdadero, entonces ve al principio de la fila
+    
+    ;Si no esto
     remove
     dec curr_char
     dec column
@@ -520,8 +528,8 @@ MAIN PROC
     remove
     dec curr_char
     dec column
-    dec si              ;decrement si
-    mov [si], 00h       ;fill NULL in removed char space in array 
+    dec si              ;Decrementa si
+    mov [si], 00h       ;Llena de null cuando se quita un caracter del arreglo
     jmp MAIN_LOOP
     goBackLine:
     dec curr_line
@@ -529,9 +537,9 @@ MAIN PROC
     dec di
     mov dl, [di]
     mov column, dl
-    goto_pos curr_line, dl  ;go to the last character position in previous row
-    mov dl, [di]        ;moving in another register because size doesn't match
-    mov curr_char, dl   ;to reset the cursor to the last position of previous line
+    goto_pos curr_line, dl  ;Ir a la ultima posicion del ultimo caracter
+    mov dl, [di]            ;Moverse a otro registro por que el tamano no corresponde
+    mov curr_char, dl       ;Para reinicial el cursor a la ultima posicion
     jmp MAIN_LOOP
         
 MAIN ENDP
